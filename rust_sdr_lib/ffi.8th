@@ -1,0 +1,16 @@
+\ Demonstrates use of FFI to communicate with external library.
+\ In this case, we want to talk to 'ffilib.so' which we compiled.
+\ You'll need to have something like LD_LIBRARY_PATH=. in order for Linux to
+\ find it (DYLD_... on macOS)
+
+\ First, declare the library:
+"target/debug/rustsdrlib.dll" lib ffilib
+
+ffilib "System could not load 'rustsdrlib.dll'" thrownull drop
+
+"V" "sdrapp" func: runmain
+runmain
+
+bye
+
+	
