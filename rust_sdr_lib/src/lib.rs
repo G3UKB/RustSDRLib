@@ -1,7 +1,7 @@
 /*
-main.rs
+lib.rs
 
-Entry module for the RustConsole SDR application
+Entry module for the RustConsoleLib library SDR application
 
 Copyright (C) 2022 by G3UKB Bob Cowdery
 
@@ -29,14 +29,7 @@ use std::time::Duration;
 use std::{cell::RefCell, rc::Rc};
 use std::io::{stdin, stdout, Read, Write};
 
-//extern crate preferences;
-//use preferences::{AppInfo, PreferencesMap, Preferences};
-//use crate ::app::common::prefs;
-
 pub mod app;
-
-// Prefs info
-//const APP_INFO: AppInfo = AppInfo{name: "RustSDRprefs", author: "BobCowdery"};
 
 /// Entry point for RustConsole SDR application
 ///
@@ -44,42 +37,44 @@ pub mod app;
 ///
 /// 
 
-#[no_mangle]
-pub extern "C" fn sdrapp() {
-    println!("Starting Rust Console...");
-
-    // Create a Prefs instance
-    //let prefs = prefs::Prefs::new();
-    //let wprefs = Rc::new(RefCell::new(prefs));
-    //wprefs.borrow_mut().restore();
-
-    // Create an instance of the Application manager type
-    //let mut i_app = app::Appdata::new(wprefs.clone());
-    let mut i_app = app::Appdata::new();
-
-    // This will initialise all modules and run the back-end system
-    //i_app.app_init(wprefs.clone());
-    i_app.app_init();
-
-    // Initialise the UI
-    // This runs the UI event loop and will return when the UI is closed
-    //i_app.ui_run(wprefs.clone());
-
-    pause();
-    // Close application
-    println!("\n\nStarting shutdown...");
-    i_app.app_close();
-
-    // Save prefs
-    //wprefs.borrow_mut().save();
-
-    println!("Rust console closing...");
-    thread::sleep(Duration::from_millis(1000));
+struct InitData {
+    i_app: app::Appdata,
 }
 
-fn pause() {
-    let mut stdout = stdout();
-    stdout.write(b"\nPress Enter to close...\n\n").unwrap();
-    stdout.flush().unwrap();
-    stdin().read(&mut [0]).unwrap();
+impl InitData {
+
+    #[no_mangle]
+    pub extern "C" fn new() -> InitData {
+        // Create an instance of the Application manager type
+        let mut app = app::Appdata::new();
+
+        InitData {
+            i_app: app,
+        }
+    }
+
+    #[no_mangle]
+    pub extern "C" fn sdrlib_run(&mut self) {
+        // Start library
+        println!("Starting Rust SDR Library...");
+
+        // Create an instance of the Application manager type
+        //let mut app = app::Appdata::new();
+
+        // This will initialise all modules and run the back-end system
+        self.i_app.app_init();
+        println!("Rust SDR Library initilaised\n");
+    }
+
+    #[no_mangle]
+    pub extern "C" fn sdrlib_close(&mut self) {
+        // Close library
+        println!("\n\nRust SDR Library shutdown...");
+        self.i_app.app_close();
+
+        println!("Rust SDR Library closing...");
+        thread::sleep(Duration::from_millis(1000));
+    }
 }
+
+
