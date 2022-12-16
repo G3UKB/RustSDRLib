@@ -38,7 +38,9 @@ pub mod app;
 ///
 /// 
 
-static (sender : crossbeam_channel::Sender<i32>, receiver : crossbeam_channel::Receiver<i32>) = unbounded(); 
+//static (sender : crossbeam_channel::Sender<i32>, receiver : crossbeam_channel::Receiver<i32>) = unbounded();
+static receiver: crossbeam_channel::Receiver<i32> = unbounded().1;
+static sender: crossbeam_channel::Sender<i32> = unbounded().0; 
 
 pub fn sdrlib_run(b: bool) {
 
@@ -49,7 +51,7 @@ pub fn sdrlib_run(b: bool) {
     } else {
         // Close library
         println!("\n\nRust SDR Library shutdown...");
-        
+        sender.send(0);
         // Need to message thread to stop... how
         // We need a channel but then need the channel to be saved
         // How to stop it going out of scope

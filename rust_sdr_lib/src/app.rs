@@ -336,7 +336,7 @@ impl Appdata {
 // Thread startup
 pub fn app_start(receiver: crossbeam_channel::Receiver<i32>) -> thread::JoinHandle<()> {
     let join_handle = thread::spawn(  move || {
-        reader_run(receiver);
+        app_run(receiver);
     });
     return join_handle;
 }
