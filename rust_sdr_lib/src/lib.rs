@@ -28,6 +28,7 @@ use std::thread;
 use std::time::Duration;
 use std::{cell::RefCell, rc::Rc};
 use std::io::{stdin, stdout, Read, Write};
+use crossbeam_channel::unbounded;
 
 pub mod app;
 
@@ -36,6 +37,16 @@ pub mod app;
 /// # Examples
 ///
 /// 
+
+struct InitData {
+    // Channel
+    pub w_sender : crossbeam_channel::Sender<i32>,
+    pub w_receiver : crossbeam_channel::Receiver<i32>,
+}
+
+impl InitData {
+
+}
 
 pub fn sdrlib_run(b: bool) {
 
@@ -49,6 +60,7 @@ pub fn sdrlib_run(b: bool) {
         
         // Need to message thread to stop... how
         // We need a channel but then need the channel to be saved
+        // How to stop it going out of scope
 
         println!("Rust SDR Library closing...");
         thread::sleep(Duration::from_millis(1000));
