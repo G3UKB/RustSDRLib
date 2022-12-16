@@ -229,7 +229,7 @@ impl Appdata {
         }
         
     }
-    
+
     //=========================================================================================
     // Initialise system to a running state
     //pub fn app_init(&mut self, _prefs: Rc<RefCell<prefs::Prefs>>) {
@@ -259,6 +259,12 @@ impl Appdata {
         }
     }
 
+    //=========================================================================================
+    // Message loop
+    pub fn app_process(&mut self) {
+
+    }
+    
     //=========================================================================================
     // Run the UI event loop. Only returns when the UI is closed.
     //pub fn ui_run(&mut self, prefs: Rc<RefCell<prefs::Prefs>>) {
@@ -325,3 +331,27 @@ impl Appdata {
     }
     
 }
+
+//==================================================================================
+// Thread startup
+pub fn app_start() -> thread::JoinHandle<()> {
+    let join_handle = thread::spawn(  move || {
+        reader_run();
+    });
+    return join_handle;
+}
+
+fn app_run() {
+    println!("Running...");
+
+    // Instantiate the runtime object
+    let mut i_app = Appdata::new();
+    i_app.app_init();
+
+    // Exits when the app loop exits
+    i_app.app_process();
+
+    // Close application lib
+    i_app.app_close();
+}
+

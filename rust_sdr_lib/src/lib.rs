@@ -37,40 +37,18 @@ pub mod app;
 ///
 /// 
 
-struct InitData {
-    i_app: app::Appdata,
-}
+pub fn sdrlib_run(b: bool) {
 
-impl InitData {
-
-    #[no_mangle]
-    pub extern "C" fn new() -> InitData {
-        // Create an instance of the Application manager type
-        let mut app = app::Appdata::new();
-
-        InitData {
-            i_app: app,
-        }
-    }
-
-    #[no_mangle]
-    pub extern "C" fn sdrlib_run(&mut self) {
+    if b {
         // Start library
-        println!("Starting Rust SDR Library...");
+        let handle = app::app_start();
 
-        // Create an instance of the Application manager type
-        //let mut app = app::Appdata::new();
-
-        // This will initialise all modules and run the back-end system
-        self.i_app.app_init();
-        println!("Rust SDR Library initilaised\n");
-    }
-
-    #[no_mangle]
-    pub extern "C" fn sdrlib_close(&mut self) {
+    } else {
         // Close library
         println!("\n\nRust SDR Library shutdown...");
-        self.i_app.app_close();
+        
+        // Need to message thread to stop... how
+        // We need a channel but then need the channel to be saved
 
         println!("Rust SDR Library closing...");
         thread::sleep(Duration::from_millis(1000));
