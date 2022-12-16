@@ -38,21 +38,13 @@ pub mod app;
 ///
 /// 
 
-struct InitData {
-    // Channel
-    pub w_sender : crossbeam_channel::Sender<i32>,
-    pub w_receiver : crossbeam_channel::Receiver<i32>,
-}
-
-impl InitData {
-
-}
+static (sender : crossbeam_channel::Sender<i32>, receiver : crossbeam_channel::Receiver<i32>) = unbounded(); 
 
 pub fn sdrlib_run(b: bool) {
 
     if b {
         // Start library
-        let handle = app::app_start();
+        let handle = app::app_start(receiver.clone());
 
     } else {
         // Close library

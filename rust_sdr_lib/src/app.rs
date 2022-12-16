@@ -261,10 +261,10 @@ impl Appdata {
 
     //=========================================================================================
     // Message loop
-    pub fn app_process(&mut self) {
+    pub fn app_process(&mut self, receiver: crossbeam_channel::Receiver<i32>) {
 
     }
-    
+
     //=========================================================================================
     // Run the UI event loop. Only returns when the UI is closed.
     //pub fn ui_run(&mut self, prefs: Rc<RefCell<prefs::Prefs>>) {
@@ -334,14 +334,14 @@ impl Appdata {
 
 //==================================================================================
 // Thread startup
-pub fn app_start() -> thread::JoinHandle<()> {
+pub fn app_start(receiver: crossbeam_channel::Receiver<i32>) -> thread::JoinHandle<()> {
     let join_handle = thread::spawn(  move || {
-        reader_run();
+        reader_run(receiver);
     });
     return join_handle;
 }
 
-fn app_run() {
+fn app_run(receiver: crossbeam_channel::Receiver<i32>) {
     println!("Running...");
 
     // Instantiate the runtime object
@@ -349,7 +349,7 @@ fn app_run() {
     i_app.app_init();
 
     // Exits when the app loop exits
-    i_app.app_process();
+    i_app.app_process(receiver);
 
     // Close application lib
     i_app.app_close();
