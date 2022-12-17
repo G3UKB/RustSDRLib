@@ -31,6 +31,7 @@ use std::io::{stdin, stdout, Read, Write};
 use std::option;
 use crossbeam_channel::unbounded;
 use std::ops::{Deref, DerefMut};
+use std::sync::{Arc, Mutex, Condvar};
 #[macro_use]
 extern crate lazy_static;
 
@@ -40,7 +41,7 @@ pub struct InitData {
     // Channel
     pub sender : crossbeam_channel::Sender<i32>,
     pub receiver : crossbeam_channel::Receiver<i32>,
-    pub handle: option::Option<JoinHandle<()>>,
+    pub handle: Mutex<option::Option<JoinHandle<()>>>,
 }
 
 impl InitData {
@@ -49,12 +50,37 @@ impl InitData {
         InitData {
             sender: s,
             receiver: r,
-            handle: None,
+            handle: Mutex::new(None),
         }
     }
     pub fn set_handle(&mut self, h:JoinHandle<()>) {
-        self.handle = Some(h);
+        *self.handle.lock().unwrap() = Some(h);
     }
+
+     
+    pub fn wait_handle(&mut self) {
+        
+        let mut x = self.handle.lock().unwrap().take();
+        //if let Some(y) = x.take() {
+            //x.join().unwrap().expect("Join Pipeline failed!");
+            x.take().unwrap().join();
+        //}
+    }
+    
+/* 
+    pub fn wait_handle(&mut self) {
+        match &self.handle {
+            None => (),
+            Some(h) => {
+                match h.lock() {
+                    Ok(h) => h.join(),
+                    Err(e) => e.into_inner(),
+                }
+            }
+        }
+    }
+*/
+    
 }
 
 lazy_static! {
@@ -75,11 +101,7 @@ pub extern "C" fn sdrlib_close() {
     // Close library
     println!("\n\nRust SDR Server shutdown...");
     init.sender.clone().send(0);
-
-    if let Some(h) = init.handle.take() {
-        h.join().expect("Failed to join application thread!");
-    }
-    
+    init.wait_handle();
     println!("Rust SDR Server closing...");
     thread::sleep(Duration::from_millis(1000));
 }
