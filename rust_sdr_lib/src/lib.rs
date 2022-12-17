@@ -24,41 +24,64 @@ The authors can be reached by email at:
 bob@bobcowdery.plus.com
 */
 
-use std::thread;
+use std::thread::{self, JoinHandle};
 use std::time::Duration;
 use std::{cell::RefCell, rc::Rc};
 use std::io::{stdin, stdout, Read, Write};
+use std::option;
 use crossbeam_channel::unbounded;
+use std::ops::{Deref, DerefMut};
+#[macro_use]
+extern crate lazy_static;
 
 pub mod app;
+#[derive(Debug)]
+pub struct InitData {
+    // Channel
+    pub sender : crossbeam_channel::Sender<i32>,
+    pub receiver : crossbeam_channel::Receiver<i32>,
+    pub handle: option::Option<JoinHandle<()>>,
+}
 
-/// Entry point for RustConsole SDR application
-///
-/// # Examples
-///
-/// 
-
-//static (sender : crossbeam_channel::Sender<i32>, receiver : crossbeam_channel::Receiver<i32>) = unbounded();
-static receiver: crossbeam_channel::Receiver<i32> = unbounded().1;
-static sender: crossbeam_channel::Sender<i32> = unbounded().0; 
-
-pub fn sdrlib_run(b: bool) {
-
-    if b {
-        // Start library
-        let handle = app::app_start(receiver.clone());
-
-    } else {
-        // Close library
-        println!("\n\nRust SDR Library shutdown...");
-        sender.send(0);
-        // Need to message thread to stop... how
-        // We need a channel but then need the channel to be saved
-        // How to stop it going out of scope
-
-        println!("Rust SDR Library closing...");
-        thread::sleep(Duration::from_millis(1000));
+impl InitData {
+    pub fn new() -> InitData {
+        let (s, r) = unbounded();
+        InitData {
+            sender: s,
+            receiver: r,
+            handle: None,
+        }
     }
+    pub fn set_handle(&mut self, h:JoinHandle<()>) {
+        self.handle = Some(h);
+    }
+}
+
+lazy_static! {
+    pub static ref init: InitData = InitData::new();
+}
+
+#[no_mangle]
+pub extern "C" fn sdrlib_run() {
+
+    // Start library
+    let handle = app::app_start(init.receiver.clone());
+    init.set_handle(handle);
+    println!("Started Rust SDR Server");
+}
+
+#[no_mangle]
+pub extern "C" fn sdrlib_close() {
+    // Close library
+    println!("\n\nRust SDR Server shutdown...");
+    init.sender.clone().send(0);
+
+    if let Some(h) = init.handle.take() {
+        h.join().expect("Failed to join application thread!");
+    }
+    
+    println!("Rust SDR Server closing...");
+    thread::sleep(Duration::from_millis(1000));
 }
 
 

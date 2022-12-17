@@ -263,6 +263,23 @@ impl Appdata {
     // Message loop
     pub fn app_process(&mut self, receiver: crossbeam_channel::Receiver<i32>) {
 
+        loop {
+            // Check for messages
+            let r = receiver.try_recv();
+            match r {
+                Ok(msg) => {
+                    match msg {
+                        0 => {
+                            break;
+                        },
+                        _ => (),
+                    };
+                },
+                // Do nothing if there are no message matches
+                _ => (),
+            };
+            thread::sleep(Duration::from_millis(100));
+        }
     }
 
     //=========================================================================================
