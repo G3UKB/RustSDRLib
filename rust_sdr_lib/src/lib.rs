@@ -115,8 +115,12 @@ pub extern "C" fn sdrlib_filter(filter: i32) {
 pub extern "C" fn sdrlib_disp_data() -> CString {
     let mut out_real = [0.0; (common_defs::DSP_BLK_SZ ) as usize];
     dsp::dsp_interface::wdsp_get_display_data(0, &mut out_real);
-    let s = CString from_utf8(serde_json::to_string(&out_real.to_vec()).unwrap()).as_bytes();
-    return (serde_json::to_string(&out_real.to_vec()).unwrap()).as_bytes() as CString;
+    let c_str = CString::new(serde_json::to_string(&out_real.to_vec()).unwrap());
+    println!("{:?}", c_str);
+    match c_str {
+        Ok(s) => return s,
+        Err(_) => return CString::new("").expect("CString new failed"),
+    }
 }
 
 
