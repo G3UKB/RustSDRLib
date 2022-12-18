@@ -31,9 +31,8 @@ pub mod protocol;
 pub mod pipeline;
 pub mod dsp;
 pub mod audio;
-//pub mod ui;
 use crate::app::common::common_defs;
-//use crate ::app::common::prefs;
+use crate::app::common::messages;
 
 use std::sync::{Arc, Mutex, Condvar};
 use std::thread;
@@ -261,7 +260,7 @@ impl Appdata {
 
     //=========================================================================================
     // Message loop
-    pub fn app_process(&mut self, receiver: crossbeam_channel::Receiver<i32>) {
+    pub fn app_process(&mut self, receiver: crossbeam_channel::Receiver<messages::AppMsg>) {
 
         loop {
             // Check for messages
@@ -269,8 +268,11 @@ impl Appdata {
             match r {
                 Ok(msg) => {
                     match msg {
-                        0 => {
+                        messages::AppMsg {msg_type: messages::AppMsgType::Terminate, param1: _} => {
                             break;
+                        },
+                        messages::AppMsg {msg_type: messages::AppMsgType::Frequency, param1: freq} => {
+                            self.i_cc.lock().unwrap().cc_set_rx_tx_freq(freq);
                         },
                         _ => (),
                     };
@@ -281,22 +283,6 @@ impl Appdata {
             thread::sleep(Duration::from_millis(100));
         }
     }
-
-    //=========================================================================================
-    // Run the UI event loop. Only returns when the UI is closed.
-    //pub fn ui_run(&mut self, prefs: Rc<RefCell<prefs::Prefs>>) {
-        /* 
-        let options = eframe::NativeOptions::default();
-        let i_cc = self.i_cc.clone();
-        eframe::run_native(
-            "Rust SDR",
-            options,
-            Box::new(|cc| Box::new(ui::egui_ui::UIApp::new(cc, i_cc))),
-        );
-        */
-        //let i_cc = self.i_cc.clone();
-        //ui::egui_main::ui_run(i_cc, prefs);
-    //}
 
     //=========================================================================================
     // Tidy close everything
@@ -351,14 +337,14 @@ impl Appdata {
 
 //==================================================================================
 // Thread startup
-pub fn app_start(receiver: crossbeam_channel::Receiver<i32>) -> thread::JoinHandle<()> {
+pub fn app_start(receiver: crossbeam_channel::Receiver<messages::AppMsg>) -> thread::JoinHandle<()> {
     let join_handle = thread::spawn(  move || {
         app_run(receiver);
     });
     return join_handle;
 }
 
-fn app_run(receiver: crossbeam_channel::Receiver<i32>) {
+fn app_run(receiver: crossbeam_channel::Receiver<messages::AppMsg>) {
     println!("Running...");
 
     // Instantiate the runtime object

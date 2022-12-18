@@ -49,3 +49,14 @@ pub enum PipelineMsg {
     StopPipeline,
 }
 
+#[derive(Debug)]
+pub enum AppMsgType {
+    Terminate,
+    Frequency,
+}
+#[derive(Debug)]
+pub struct AppMsg {
+    pub msg_type: AppMsgType,
+    pub param1: u32,
+}
+

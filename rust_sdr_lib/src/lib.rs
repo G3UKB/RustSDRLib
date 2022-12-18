@@ -27,60 +27,55 @@ bob@bobcowdery.plus.com
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 use crossbeam_channel::unbounded;
+use std::sync::Mutex;
+
+use crate::app::common::messages;
 
 pub mod app;
 
 //#[derive(Debug)]
 pub struct InitData {
     // Channel
-    pub sender : crossbeam_channel::Sender<i32>,
-    pub receiver : crossbeam_channel::Receiver<i32>,
+    pub sender : crossbeam_channel::Sender<messages::AppMsg>,
+    pub receiver : crossbeam_channel::Receiver<messages::AppMsg>,
     pub handle: Option<JoinHandle<()>>,
 }
 
-impl InitData {
-    pub fn new() -> InitData {
-        let (s, r) = unbounded();
-        InitData {
-            sender: s,
-            receiver: r,
-            handle: None,
-        }
-    }
-    pub fn set_handle(&mut self, h:JoinHandle<()>) {
-        self.handle = Some(h);
-    }
-    
-}
+static GLOBAL_DATA: Mutex<Option<InitData>> = Mutex::new(None);
 
-// Using the strategy from https://doc.rust-lang.org/nomicon/ffi.html#representing-opaque-structs for creating opaque types
-// This allows us to avoid exposing any details about InitData to the C API
-#[repr(C)]
-pub struct AppContext {
-    _data: [u8; 0],
-    _marker: core::marker::PhantomData<(*mut u8, core::marker::PhantomPinned)>,
+#[no_mangle]
+pub fn sdrlib_init() {
+    let mut guard = GLOBAL_DATA.lock().unwrap();
+    let init_data = &mut *guard;
+    let (s, r) = unbounded();
+    init_data.replace(InitData { 
+        sender: s, 
+        receiver: r, 
+        handle: None,
+    });
 }
 
 #[no_mangle]
-pub extern "C" fn sdrlib_run() -> *mut AppContext {
-    let mut init = Box::new(InitData::new());
+pub extern "C" fn sdrlib_run() {
+    let mut guard = GLOBAL_DATA.lock().unwrap();
+    let init_data = guard.as_mut().expect("Call init before using sdrlib_run");
     // Start library
-    let handle = app::app_start(init.receiver.clone());
-    init.set_handle(handle);
+    let handle = app::app_start(init_data.receiver.clone());
+    init_data.handle = Some(handle);
     println!("Started Rust SDR Server");
-
-    Box::into_raw(init).cast()
 }
 
 #[no_mangle]
-pub extern "C" fn sdrlib_close(ctx: *mut AppContext) {
-    let mut init = unsafe { Box::from_raw(ctx.cast::<InitData>()) };
+pub extern "C" fn sdrlib_close() {
+    let mut guard = GLOBAL_DATA.lock().unwrap();
+    let init_data = guard.as_mut().expect("Call init before using sdrlib_run");
     println!("\n\nRust SDR Server shutdown...");
-    init.sender
+    let msg = messages::AppMsg {msg_type: messages::AppMsgType::Terminate, param1: 0};
+    init_data.sender
         .clone()
-        .send(0)
+        .send(msg)
         .expect("Channel should not be closed yet");
-    if let Some(h) = init.handle.take() {
+    if let Some(h) = init_data.handle.take() {
         println!("Waiting for application thread to terminate...");
         h.join().expect("Failed to join application thread!");
         println!("Application thread terminated");
@@ -88,6 +83,17 @@ pub extern "C" fn sdrlib_close(ctx: *mut AppContext) {
 
     println!("Rust SDR Server closing...");
     thread::sleep(Duration::from_millis(1000));
+}
+
+#[no_mangle]
+pub extern "C" fn sdrlib_freq(freq: u32) {
+    let mut guard = GLOBAL_DATA.lock().unwrap();
+    let init_data = guard.as_mut().expect("Call init before using sdrlib_run");
+    let msg = messages::AppMsg {msg_type: messages::AppMsgType::Frequency, param1: freq};
+    init_data.sender
+        .clone()
+        .send(msg)
+        .expect("Channel rejected frequency command");
 }
 
 
