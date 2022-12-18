@@ -26,22 +26,16 @@ bob@bobcowdery.plus.com
 
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
-use std::{cell::RefCell, rc::Rc};
-use std::io::{stdin, stdout, Read, Write};
-use std::option;
 use crossbeam_channel::unbounded;
-use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, Mutex, Condvar};
-#[macro_use]
-extern crate lazy_static;
 
 pub mod app;
-#[derive(Debug)]
+
+//#[derive(Debug)]
 pub struct InitData {
     // Channel
     pub sender : crossbeam_channel::Sender<i32>,
     pub receiver : crossbeam_channel::Receiver<i32>,
-    pub handle: Mutex<option::Option<JoinHandle<()>>>,
+    pub handle: Option<JoinHandle<()>>,
 }
 
 impl InitData {
@@ -50,58 +44,48 @@ impl InitData {
         InitData {
             sender: s,
             receiver: r,
-            handle: Mutex::new(None),
+            handle: None,
         }
     }
     pub fn set_handle(&mut self, h:JoinHandle<()>) {
-        *self.handle.lock().unwrap() = Some(h);
+        self.handle = Some(h);
     }
-
-     
-    pub fn wait_handle(&mut self) {
-        
-        let mut x = self.handle.lock().unwrap().take();
-        //if let Some(y) = x.take() {
-            //x.join().unwrap().expect("Join Pipeline failed!");
-            x.take().unwrap().join();
-        //}
-    }
-    
-/* 
-    pub fn wait_handle(&mut self) {
-        match &self.handle {
-            None => (),
-            Some(h) => {
-                match h.lock() {
-                    Ok(h) => h.join(),
-                    Err(e) => e.into_inner(),
-                }
-            }
-        }
-    }
-*/
     
 }
 
-lazy_static! {
-    pub static ref init: InitData = InitData::new();
+// Using the strategy from https://doc.rust-lang.org/nomicon/ffi.html#representing-opaque-structs for creating opaque types
+// This allows us to avoid exposing any details about InitData to the C API
+#[repr(C)]
+pub struct AppContext {
+    _data: [u8; 0],
+    _marker: core::marker::PhantomData<(*mut u8, core::marker::PhantomPinned)>,
 }
 
 #[no_mangle]
-pub extern "C" fn sdrlib_run() {
-
+pub extern "C" fn sdrlib_run() -> *mut AppContext {
+    let mut init = Box::new(InitData::new());
     // Start library
     let handle = app::app_start(init.receiver.clone());
     init.set_handle(handle);
     println!("Started Rust SDR Server");
+
+    Box::into_raw(init).cast()
 }
 
 #[no_mangle]
-pub extern "C" fn sdrlib_close() {
-    // Close library
+pub extern "C" fn sdrlib_close(ctx: *mut AppContext) {
+    let mut init = unsafe { Box::from_raw(ctx.cast::<InitData>()) };
     println!("\n\nRust SDR Server shutdown...");
-    init.sender.clone().send(0);
-    init.wait_handle();
+    init.sender
+        .clone()
+        .send(0)
+        .expect("Channel should not be closed yet");
+    if let Some(h) = init.handle.take() {
+        println!("Waiting for application thread to terminate...");
+        h.join().expect("Failed to join application thread!");
+        println!("Application thread terminated");
+    }
+
     println!("Rust SDR Server closing...");
     thread::sleep(Duration::from_millis(1000));
 }
