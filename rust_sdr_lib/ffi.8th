@@ -12,6 +12,10 @@ ffilib "System could not load 'rustsdrlib.dll'" thrownull drop
 "V" "sdrlib_run" func: runlib
 "V" "sdrlib_close" func: closelib
 "VU" "sdrlib_freq" func: set_freq
+"VU" "sdrlib_mode" func: mode
+"VU" "sdrlib_filter" func: filter
+"P" "sdrlib_disp_data" func: data
+
 
 init
 runlib
@@ -21,6 +25,15 @@ set_freq
 2 sleep
 7180000
 set_freq
+2 sleep
+2
+mode
+2 sleep
+4
+filter
+2 sleep
+data
+.s
 10 sleep
 closelib
 bye

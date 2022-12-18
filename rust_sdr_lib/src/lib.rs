@@ -29,7 +29,9 @@ use std::time::Duration;
 use crossbeam_channel::unbounded;
 use std::sync::Mutex;
 
+use crate::app::common::common_defs;
 use crate::app::common::messages;
+use crate::app::dsp;
 
 pub mod app;
 
@@ -94,6 +96,23 @@ pub extern "C" fn sdrlib_freq(freq: u32) {
         .clone()
         .send(msg)
         .expect("Channel rejected frequency command");
+}
+
+#[no_mangle]
+pub extern "C" fn sdrlib_mode(mode: i32) {
+    dsp::dsp_interface::wdsp_set_rx_mode(0, mode);
+}
+
+#[no_mangle]
+pub extern "C" fn sdrlib_filter(filter: i32) {
+    dsp::dsp_interface::wdsp_set_rx_filter(0, filter);
+}
+
+#[no_mangle]
+pub extern "C" fn sdrlib_disp_data() -> [f32; (common_defs::DSP_BLK_SZ ) as usize] {
+    let mut out_real = [0.0; (common_defs::DSP_BLK_SZ ) as usize];
+    dsp::dsp_interface::wdsp_get_display_data(0, &mut out_real);
+    return out_real;
 }
 
 
