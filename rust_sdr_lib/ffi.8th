@@ -14,7 +14,7 @@ ffilib "System could not load 'rustsdrlib.dll'" thrownull drop
 "VU" "sdrlib_freq" func: set_freq
 "VU" "sdrlib_mode" func: mode
 "VU" "sdrlib_filter" func: filter
-"P" "sdrlib_disp_data" func: data
+"Z" "sdrlib_disp_data" func: data
 
 
 init

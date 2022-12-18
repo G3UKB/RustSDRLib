@@ -28,6 +28,9 @@ use std::thread::{self, JoinHandle};
 use std::time::Duration;
 use crossbeam_channel::unbounded;
 use std::sync::Mutex;
+use std::ffi::CString;
+
+extern crate serde;
 
 use crate::app::common::common_defs;
 use crate::app::common::messages;
@@ -109,10 +112,11 @@ pub extern "C" fn sdrlib_filter(filter: i32) {
 }
 
 #[no_mangle]
-pub extern "C" fn sdrlib_disp_data() -> [f32; (common_defs::DSP_BLK_SZ ) as usize] {
+pub extern "C" fn sdrlib_disp_data() -> CString {
     let mut out_real = [0.0; (common_defs::DSP_BLK_SZ ) as usize];
     dsp::dsp_interface::wdsp_get_display_data(0, &mut out_real);
-    return out_real;
+    let s = CString from_utf8(serde_json::to_string(&out_real.to_vec()).unwrap()).as_bytes();
+    return (serde_json::to_string(&out_real.to_vec()).unwrap()).as_bytes() as CString;
 }
 
 
