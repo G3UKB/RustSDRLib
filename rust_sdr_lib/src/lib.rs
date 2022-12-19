@@ -115,12 +115,5 @@ pub extern "C" fn sdrlib_filter(filter: i32) {
 pub extern "C" fn sdrlib_disp_data() -> *mut f32 {
     let mut out_real = [0.0; (common_defs::DSP_BLK_SZ ) as usize];
     dsp::dsp_interface::wdsp_get_display_data(0, &mut out_real);
-    println!("out_real[100] {}", out_real[100]);
-    let v_out_real = out_real.to_vec();
-    println!("v_out_real[100] {}", v_out_real[100]);
-    let data = Box::new(v_out_real);
-    println!("data[100] {}", data[100]);
-    let r = Box::into_raw(data) as *mut _;
-    unsafe {println!("r[100] {}", *((r as *mut f32).add(100)));}
-    return r;
+    return Box::into_raw(Box::new(out_real)) as *mut _;
 }
