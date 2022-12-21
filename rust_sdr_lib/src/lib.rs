@@ -117,3 +117,12 @@ pub extern "C" fn sdrlib_disp_data() -> *mut f32 {
     dsp::dsp_interface::wdsp_get_display_data(0, &mut out_real);
     return Box::into_raw(Box::new(out_real)) as *mut _;
 }
+
+#[no_mangle]
+pub extern "C" fn sdrlib_update_disp_width(width: i32) {
+    dsp::dsp_interface::wdsp_update_disp(
+        0, common_defs::FFT_SZ, common_defs::WindowTypes::Rectangular as i32, 
+        common_defs::SUB_SPANS, common_defs::IN_SZ, width, 
+        common_defs::AvMode::PanTimeAvLin as i32, common_defs::OVER_FRAMES, 
+        common_defs::SAMPLE_RATE, common_defs::FRAME_RATE);        
+}
